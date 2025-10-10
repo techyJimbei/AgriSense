@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.sp
 import com.example.mymajor1.R
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -222,9 +224,10 @@ fun SignUpScreen(
                             password = password
                         )
                         authViewModel.registerUser(request)
-                        navController.navigate(Screen.Profile.route){
-                            popUpTo(Screen.Onboarding.route) {inclusive = true}
+                        navController.navigate(Screen.Profile.route) {
+                            popUpTo(Screen.SignUp.route) { inclusive = true }
                         }
+
                     }
                 },
                 modifier = Modifier

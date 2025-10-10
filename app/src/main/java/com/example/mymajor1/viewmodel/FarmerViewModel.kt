@@ -25,7 +25,6 @@ class FarmerViewModel(
             try{
                 val response = api.registerFarmer(request)
                 if(response.isSuccessful && response.body()!= null){
-                    _farmerInfo.value = response.body()
                     Log.e("Farmer", "Farmer Account created")
                 }
                 else{
@@ -35,6 +34,26 @@ class FarmerViewModel(
             catch(e: Exception){
                 Log.e("Farmer", "Exception occurred"+e.message)
             }
+        }
+    }
+
+    fun getFarmerDetails(){
+        viewModelScope.launch {
+           try{
+               val token  = "Bearer ${tokenManager.getToken() ?: ""}"
+               val response = api.getFarmerDetails(token)
+
+               if(response.isSuccessful && response.body() != null){
+                   _farmerInfo.value = response.body()
+                   Log.e("Farmer", "Farmer details received")
+               }
+               else{
+                   Log.e("Farmer", "Farmer details is null")
+               }
+           }
+           catch(e: Exception){
+               Log.e("Farmer", "Exception occurred "+e.message)
+           }
         }
     }
 }

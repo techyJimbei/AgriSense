@@ -233,12 +233,12 @@ fun UserProfileScreen(
                             farmerAddress = address,
                             farmerLanguage = selectedLanguage,
                             farmerAge = farmerAge,
-                            userId = userId?.id
+                            userId = userId?.userId
                         )
 
                         farmerViewModel.registerFarmer(request)
                         navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Profile.route) { inclusive = true }
+                            popUpTo(Screen.Login.route) { inclusive = true }
                         }
                     }
                 },

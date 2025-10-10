@@ -12,10 +12,17 @@ import androidx.navigation.compose.rememberNavController
 import com.example.mymajor1.api.ApiService
 import com.example.mymajor1.jwt.TokenManager
 import com.example.mymajor1.jwt.dataStore
+import com.example.mymajor1.pages.CropCalenderScreen
+import com.example.mymajor1.pages.CropDiagnosisScreen
+import com.example.mymajor1.pages.GovernmentSchemeScreen
+import com.example.mymajor1.pages.HelpLineNumberScreen
 import com.example.mymajor1.pages.HomeScreen
 import com.example.mymajor1.pages.LoginScreen
+import com.example.mymajor1.pages.MandiPriceScreen
 import com.example.mymajor1.pages.OnboardingScreen
+import com.example.mymajor1.pages.ProfileDetailScreen
 import com.example.mymajor1.pages.SignUpScreen
+import com.example.mymajor1.pages.SoilAndNutrientsScreen
 import com.example.mymajor1.pages.Splash
 import com.example.mymajor1.viewmodel.AuthViewModel
 import com.example.mymajor1.viewmodel.AuthViewModelFactory
@@ -29,6 +36,13 @@ sealed class Screen(val route: String) {
     object SignUp: Screen("signup_screen")
     object Profile: Screen("profile_screen")
     object Home: Screen("home_screen")
+    object ProfileDetail: Screen("profile_detail_screen")
+    object MandiPrice: Screen("mandiprice_screen")
+    object SoilAndNutrients: Screen("soilandnutrients_screen")
+    object CropCalendar: Screen("cropcalender_screen")
+    object CropDiagnosis: Screen("cropdiagnosis_screen")
+    object Helpline: Screen("helpline_screen")
+    object GovtSchemes: Screen("govtschemes_screen")
 }
 
 @Composable
@@ -89,7 +103,43 @@ fun ApplicationNavGraph(
         }
 
         composable(Screen.Home.route){
-            HomeScreen()
+            HomeScreen(
+                farmerViewModel = farmerViewModel,
+                navController = navController
+            )
+        }
+
+        composable(Screen.ProfileDetail.route) {
+            ProfileDetailScreen(
+                farmerViewModel = farmerViewModel,
+                navController = navController
+            )
+        }
+
+        composable(Screen.MandiPrice.route){
+            MandiPriceScreen()
+        }
+
+        composable(Screen.SoilAndNutrients.route) {
+            SoilAndNutrientsScreen()
+        }
+
+        composable(Screen.CropCalendar.route){
+            CropCalenderScreen()
+        }
+
+        composable(Screen.CropDiagnosis.route){
+            CropDiagnosisScreen(
+                navController = navController
+            )
+        }
+
+        composable(Screen.Helpline.route) {
+            HelpLineNumberScreen()
+        }
+
+        composable(Screen.GovtSchemes.route){
+            GovernmentSchemeScreen()
         }
 
     }
