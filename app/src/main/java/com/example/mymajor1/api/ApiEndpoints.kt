@@ -1,5 +1,6 @@
 package com.example.mymajor1.api
 
+import com.example.mymajor1.model.CropDetectionRequest
 import com.example.mymajor1.model.CropDetectionResponse
 import com.example.mymajor1.model.FarmerAccountRequest
 import com.example.mymajor1.model.FarmerAccountResponse
@@ -39,5 +40,5 @@ interface ApiEndpoints {
 
     //crop diagnosis
     @POST("/api/crop/detect")
-    suspend fun detectDisease(@Header("Authorization") token: String, @Body disease: String): Response<CropDetectionResponse>
+    suspend fun detectDisease(@Header("Authorization") token: String, @Body disease: CropDetectionRequest): Response<CropDetectionResponse>
 }

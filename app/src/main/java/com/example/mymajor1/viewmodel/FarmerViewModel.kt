@@ -19,7 +19,6 @@ class FarmerViewModel(
     private val _farmerInfo = MutableStateFlow<FarmerAccountResponse?>(null)
     val farmerInfo: StateFlow<FarmerAccountResponse?> = _farmerInfo
 
-
     fun registerFarmer(request: FarmerAccountRequest){
         viewModelScope.launch {
             try{

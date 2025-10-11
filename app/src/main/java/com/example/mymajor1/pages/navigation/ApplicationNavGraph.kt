@@ -26,6 +26,8 @@ import com.example.mymajor1.pages.SoilAndNutrientsScreen
 import com.example.mymajor1.pages.Splash
 import com.example.mymajor1.viewmodel.AuthViewModel
 import com.example.mymajor1.viewmodel.AuthViewModelFactory
+import com.example.mymajor1.viewmodel.CropDetectionViewModel
+import com.example.mymajor1.viewmodel.CropDetectionViewModelFactory
 import com.example.mymajor1.viewmodel.FarmerViewModel
 import com.example.mymajor1.viewmodel.FarmerViewModelFactory
 
@@ -61,6 +63,10 @@ fun ApplicationNavGraph(
 
     val farmerViewModel: FarmerViewModel = viewModel(
         factory = FarmerViewModelFactory(apiService, tokenManager)
+    )
+
+    val cropDetectionViewModel: CropDetectionViewModel = viewModel (
+        factory = CropDetectionViewModelFactory(apiService, tokenManager)
     )
 
     NavHost(
@@ -112,7 +118,9 @@ fun ApplicationNavGraph(
         composable(Screen.ProfileDetail.route) {
             ProfileDetailScreen(
                 farmerViewModel = farmerViewModel,
-                navController = navController
+                navController = navController,
+                authViewModel = authViewModel,
+                tokenManager = tokenManager
             )
         }
 
@@ -130,7 +138,8 @@ fun ApplicationNavGraph(
 
         composable(Screen.CropDiagnosis.route){
             CropDiagnosisScreen(
-                navController = navController
+                navController = navController,
+                cropDetectionViewModel = cropDetectionViewModel
             )
         }
 

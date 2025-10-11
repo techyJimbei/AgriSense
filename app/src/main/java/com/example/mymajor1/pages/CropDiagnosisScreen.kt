@@ -15,18 +15,30 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,11 +52,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import com.example.mymajor1.R
+import com.example.mymajor1.viewmodel.CropDetectionViewModel
 import org.tensorflow.lite.Interpreter
 import java.io.File
 import java.io.FileInputStream
@@ -69,31 +83,36 @@ fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri {
     FileOutputStream(file).use { out ->
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
     }
-
-    return FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.provider",
-        file
-    )
+    return FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CropDiagnosisScreen(
-    navController: NavController
+    navController: NavController,
+    cropDetectionViewModel: CropDetectionViewModel
 ) {
-
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var inputPrompt by remember { mutableStateOf("") }
-
+    var showBottomSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val cropDiseaseInfo = cropDetectionViewModel.cropDiseaseInfo.collectAsState().value
+    val isLoading = cropDetectionViewModel.isLoading.collectAsState().value
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Show bottom sheet when data is available
+    LaunchedEffect(cropDiseaseInfo) {
+        if (cropDiseaseInfo != null) {
+            showBottomSheet = true
+        }
+    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let {
             selectedImageUri = it
-            processImage(context, it)
+            processImage(context, it, cropDetectionViewModel)
         }
     }
 
@@ -103,7 +122,7 @@ fun CropDiagnosisScreen(
         bitmap?.let {
             val uri = saveBitmapToCache(context, it)
             selectedImageUri = uri
-            processImage(context, uri)
+            processImage(context, uri, cropDetectionViewModel)
         }
     }
 
@@ -120,6 +139,7 @@ fun CropDiagnosisScreen(
                 .fillMaxWidth(),
             contentScale = ContentScale.FillWidth
         )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -127,30 +147,19 @@ fun CropDiagnosisScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
                 Image(
                     painter = painterResource(R.drawable.back_icon),
                     contentDescription = "back icon",
                     modifier = Modifier
                         .size(40.dp)
-                        .clickable(onClick = {
-                            navController.popBackStack()
-                        })
+                        .clickable { navController.popBackStack() }
                 )
-
             }
 
+            Text("Diagnose Your Crop Health", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Text(
-                text = "Diagnose Your Crop Health",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Text(
-                text = "Upload images of your crop leaves to\nquickly identify diseases and pests.",
+                "Upload images of your crop leaves to quickly identify diseases and pests.",
                 fontSize = 16.sp,
                 color = colorResource(R.color.text_green)
             )
@@ -161,22 +170,16 @@ fun CropDiagnosisScreen(
                     .height(140.dp)
                     .shadow(4.dp, RoundedCornerShape(24.dp))
                     .background(colorResource(R.color.light_green), RoundedCornerShape(24.dp))
-                    .clickable(
-                        onClick = {}
-                    )
             ) {
                 OutlinedTextField(
                     value = inputPrompt,
                     onValueChange = { inputPrompt = it },
                     placeholder = {
-                        Text(
-                            text = "|Describe your crop’s condition...",
-                            color = colorResource(R.color.text_green)
-                        )
+                        Text("|Describe your crop's condition...", color = colorResource(R.color.text_green))
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(end = 56.dp) 
+                        .padding(end = 56.dp)
                         .align(Alignment.TopStart),
                     shape = RoundedCornerShape(24.dp),
                     colors = TextFieldDefaults.outlinedTextFieldColors(
@@ -184,30 +187,9 @@ fun CropDiagnosisScreen(
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent
                     ),
-                    singleLine = false,
                     maxLines = 4
                 )
-
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .align(Alignment.BottomEnd)
-                        .offset(x = (-8).dp, y = (-8).dp)
-                        .background(
-                            colorResource(R.color.text_green),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                        .clickable {},
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.send_icon),
-                        contentDescription = "send icon",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
             }
-
 
             Box(
                 modifier = Modifier
@@ -215,11 +197,11 @@ fun CropDiagnosisScreen(
                     .height(160.dp)
                     .shadow(4.dp, RoundedCornerShape(24.dp))
                     .background(colorResource(R.color.light_green), RoundedCornerShape(24.dp))
-                    .clickable(
-                        onClick = {
+                    .clickable {
+                        if (!isLoading) {
                             galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                         }
-                    )
+                    }
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -228,16 +210,10 @@ fun CropDiagnosisScreen(
                 ) {
                     Image(
                         painter = painterResource(R.drawable.add_image_icon),
-                        contentDescription = "add image icon",
+                        contentDescription = null,
                         modifier = Modifier.size(90.dp)
                     )
-
-                    Text(
-                        text = "Upload Image",
-                        fontSize = 16.sp,
-                        color = colorResource(R.color.text_green),
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("Upload Image", fontSize = 16.sp, color = colorResource(R.color.text_green), fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -247,12 +223,12 @@ fun CropDiagnosisScreen(
                     .height(160.dp)
                     .shadow(4.dp, RoundedCornerShape(24.dp))
                     .background(colorResource(R.color.text_green), RoundedCornerShape(24.dp))
-                    .clickable(
-                        onClick = {
+                    .clickable {
+                        if (!isLoading) {
                             cameraLauncher.launch(null)
                         }
-                    )
-            ){
+                    }
+            ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -260,68 +236,229 @@ fun CropDiagnosisScreen(
                 ) {
                     Image(
                         painter = painterResource(R.drawable.camera_icon),
-                        contentDescription = "take picture icon",
+                        contentDescription = null,
                         modifier = Modifier.size(80.dp)
                     )
-
-                    Text(
-                        text = "Take a photo",
-                        fontSize = 16.sp,
-                        color = colorResource(R.color.white),
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("Take a photo", fontSize = 16.sp, color = colorResource(R.color.white), fontWeight = FontWeight.Medium)
                 }
+            }
+        }
 
+        // Loading Indicator
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            color = colorResource(R.color.text_green)
+                        )
+                        Text(
+                            "Analyzing your crop...",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = colorResource(R.color.text_green)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Bottom Sheet Dialog
+        if (showBottomSheet && cropDiseaseInfo != null) {
+            ModalBottomSheet(
+                onDismissRequest = { showBottomSheet = false },
+                sheetState = sheetState,
+                containerColor = Color.White,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Diagnosis Result",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorResource(R.color.text_green)
+                        )
+                        IconButton(onClick = { showBottomSheet = false }) {
+                            Icon(
+                                painter = painterResource(R.drawable.back_icon),
+                                contentDescription = "Close",
+                                modifier = Modifier.size(24.dp),
+                                tint = colorResource(R.color.text_green)
+                            )
+                        }
+                    }
+
+                    Divider(color = colorResource(R.color.text_green).copy(alpha = 0.2f), thickness = 1.dp)
+
+                    // Disease Name - Prominent
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = colorResource(R.color.text_green).copy(alpha = 0.1f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Disease Identified",
+                                fontSize = 14.sp,
+                                color = colorResource(R.color.text_green).copy(alpha = 0.7f),
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                cropDiseaseInfo.diseaseName,
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colorResource(R.color.text_green),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    // Symptoms Section
+                    InfoSection(
+                        title = "Symptoms",
+                        content = cropDiseaseInfo.symptoms,
+                        icon = "🔍"
+                    )
+
+                    // Pest/Pathogen Section
+                    InfoSection(
+                        title = "Causative Agent",
+                        content = cropDiseaseInfo.pestName,
+                        icon = "🦠"
+                    )
+
+                    // Remedy Section - Highlighted
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = colorResource(R.color.text_green)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text("💊", fontSize = 24.sp)
+                                Text(
+                                    "Recommended Treatment",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                            Text(
+                                cropDiseaseInfo.remedy,
+                                fontSize = 15.sp,
+                                color = Color.White,
+                                lineHeight = 22.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
-
 }
 
+@Composable
+fun InfoSection(title: String, content: String, icon: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = colorResource(R.color.light_green)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(icon, fontSize = 22.sp)
+                Text(
+                    title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorResource(R.color.text_green)
+                )
+            }
+            Text(
+                content,
+                fontSize = 15.sp,
+                color = colorResource(R.color.text_green).copy(alpha = 0.9f),
+                lineHeight = 22.sp
+            )
+        }
+    }
+}
 
-fun processImage(context: Context, uri: Uri) {
+fun processImage(context: Context, uri: Uri, viewModel: CropDetectionViewModel) {
     try {
         val bitmap = BitmapFactory.decodeStream(context.contentResolver.openInputStream(uri))
         val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 224, 224, true)
-
-        // 2. Convert bitmap to ByteBuffer
         val inputBuffer = convertBitmapToByteBuffer(resizedBitmap)
-
-        // 3. Load TFLite model
         val modelFile = loadModelFile(context, "PlantDiseaseModel.tflite")
         val interpreter = Interpreter(modelFile)
-
-        // 4. Prepare output array [1,43]
         val output = Array(1) { FloatArray(43) }
-
-        // 5. Run inference
         interpreter.run(inputBuffer, output)
-
-        // 6. Load class labels from assets
         val labels = context.assets.open("labels.txt").bufferedReader().use { it.readLines() }
-
-        // 7. Find top prediction
         val topIndex = output[0].indices.maxByOrNull { output[0][it] } ?: -1
-        val confidence = if (topIndex != -1) output[0][topIndex] else 0f
         val detectedDisease = if (topIndex != -1) labels.getOrElse(topIndex) { "Unknown" } else "Unknown"
-
-        Log.d("ModelResult", "Detected disease: $detectedDisease with confidence: $confidence")
-
+        Log.d("ModelResult", "Detected disease: $detectedDisease")
         interpreter.close()
+        viewModel.detectDisease(detectedDisease)
     } catch (e: Exception) {
         Log.e("ModelError", "Error running model: ${e.message}", e)
     }
 }
 
-
 private fun convertBitmapToByteBuffer(bitmap: Bitmap): ByteBuffer {
     val inputSize = 224
-    val byteBuffer = ByteBuffer.allocateDirect(4 * inputSize * inputSize * 3) // float size = 4 bytes
+    val byteBuffer = ByteBuffer.allocateDirect(4 * inputSize * inputSize * 3)
     byteBuffer.order(ByteOrder.nativeOrder())
-
     val intValues = IntArray(inputSize * inputSize)
     bitmap.getPixels(intValues, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-
     for (pixelValue in intValues) {
         val r = ((pixelValue shr 16) and 0xFF) / 255.0f
         val g = ((pixelValue shr 8) and 0xFF) / 255.0f
@@ -330,7 +467,6 @@ private fun convertBitmapToByteBuffer(bitmap: Bitmap): ByteBuffer {
         byteBuffer.putFloat(g)
         byteBuffer.putFloat(b)
     }
-
     byteBuffer.rewind()
     return byteBuffer
 }

@@ -91,4 +91,8 @@ class AuthViewModel(
         }
     }
 
+    suspend fun logout(tokenManager: TokenManager) {
+        tokenManager.clearToken()
+    }
+
 }
