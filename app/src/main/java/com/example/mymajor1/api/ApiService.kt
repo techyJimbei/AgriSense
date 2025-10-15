@@ -7,25 +7,23 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiService {
-    private const val BASE_URL = "http://192.168.1.3:8080/"
+    private const val BASE_URL = "http://192.168.1.5:8080/"
 
-    // Logging interceptor to see API requests/responses in Logcat
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    // OkHttpClient with increased timeouts for Ollama AI responses
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
-        .connectTimeout(30, TimeUnit.SECONDS)    // Time to establish connection
-        .readTimeout(60, TimeUnit.SECONDS)       // Time to wait for response (Ollama needs this!)
-        .writeTimeout(30, TimeUnit.SECONDS)      // Time to send request
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
     val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(okHttpClient)  // Add custom OkHttp client with timeouts
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }

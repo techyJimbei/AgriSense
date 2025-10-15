@@ -1,5 +1,8 @@
 package com.example.mymajor1.pages
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,18 +23,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -45,24 +54,93 @@ import androidx.navigation.NavController
 import com.example.mymajor1.R
 import com.example.mymajor1.pages.navigation.Screen
 import com.example.mymajor1.viewmodel.FarmerViewModel
+import com.example.mymajor1.viewmodel.QueryViewModel
+import com.example.mymajor1.viewmodel.WeatherViewModel
+import com.google.android.gms.location.FusedLocationProviderClient
+import getCurrentLocation
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     farmerViewModel: FarmerViewModel,
-    navController: NavController
+    queryViewModel: QueryViewModel,
+    weatherViewModel: WeatherViewModel,
+    navController: NavController,
+    fusedLocationClient: FusedLocationProviderClient
 ) {
 
     LaunchedEffect(Unit) {
         farmerViewModel.getFarmerDetails()
+        val coordinates = getCurrentLocation(fusedLocationClient)
+        coordinates?.let { (lat, lon) ->
+            weatherViewModel.fetchWeather(lat.toFloat(), lon.toFloat())
+        }
     }
 
     val farmerInfo by farmerViewModel.farmerInfo.collectAsState()
 
+    val isListening by queryViewModel.isListening.collectAsState()
+    val partialText by queryViewModel.partialText.collectAsState()
+    val finalText by queryViewModel.finalText.collectAsState()
+    val backendResponse by queryViewModel.backendResponse.collectAsState()
+    val isLoading by queryViewModel.isLoading.collectAsState()
+    val errorMessage by queryViewModel.errorMessage.collectAsState()
+    val audioLevel by queryViewModel.audioLevel.collectAsState()
+
+    var showDialog by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+
+    val weather by weatherViewModel.weatherState.collectAsState()
+    val loading by weatherViewModel.loading.collectAsState()
+    val error by weatherViewModel.error.collectAsState()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            showDialog = true
+        } else {
+            showPermissionDialog = true
+        }
+    }
+
+    fun checkAndRequestPermission() {
+        when {
+            context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                showDialog = true
+            }
+            else -> {
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+
+    LaunchedEffect(showDialog) {
+        if (showDialog) {
+            val languageCode = when (farmerInfo?.farmerLanguage?.lowercase()) {
+                "hindi" -> "hi-IN"
+                "tamil" -> "ta-IN"
+                "telugu" -> "te-IN"
+                "kannada" -> "kn-IN"
+                "marathi" -> "mr-IN"
+                "bengali" -> "bn-IN"
+                "gujarati" -> "gu-IN"
+                "malayalam" -> "ml-IN"
+                "punjabi" -> "pa-IN"
+                "english" -> "en-IN"
+                else -> farmerInfo?.farmerLanguage ?: "en-IN"
+            }
+            queryViewModel.initializeSpeech(context, languageCode)
+        }
+    }
+
     val buttons = listOf("Mandi Price", " Soil and\nNutrients", "Crop\nCalender", "Crop\nDiagnosis", "Helpline\nNumber", "Government\n   Schemes")
 
     val icons = listOf(R.drawable.rupees_icon, R.drawable.plant_icon, R.drawable.calender_icon
-    , R.drawable.diagnosis_icon, R.drawable.call_icon, R.drawable.sceheme_icon)
+        , R.drawable.diagnosis_icon, R.drawable.call_icon, R.drawable.sceheme_icon)
 
     val routes = listOf(
         Screen.MandiPrice.route,
@@ -177,25 +255,54 @@ fun HomeScreen(
 
                 Column(
                     modifier = Modifier,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    when {
+                        loading -> Text(
+                            text = "Loading...",
+                            color = colorResource(R.color.text_green),
+                            fontSize = 20.sp
+                        )
 
-                    Text(
-                        text = "44° C ",
-                        color = colorResource(R.color.text_green),
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                        error != null -> Text(
+                            text = "⚠️ ${error ?: "Error"}",
+                            color = colorResource(R.color.black),
+                            fontSize = 16.sp
+                        )
 
-                    Text(
-                        text = "  Windy\nCan Rain",
-                        color = colorResource(R.color.black),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Light
-                    )
+                        weather != null -> {
+                            Text(
+                                text = "${weather!!.temperature}°C",
+                                color = colorResource(R.color.text_green),
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.Medium
+                            )
 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = weather!!.weatherIcon,
+                                    fontSize = 32.sp,
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = weather!!.weatherDescription,
+                                    color = colorResource(R.color.black),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Light
+                                )
+                            }
+
+                        }
+
+                        else -> Text(
+                            text = "Weather unavailable",
+                            color = colorResource(R.color.black),
+                            fontSize = 18.sp
+                        )
+                    }
                 }
+
 
             }
 
@@ -210,7 +317,7 @@ fun HomeScreen(
                         color = colorResource(R.color.white).copy(alpha = 0.8f),
                         shape = RoundedCornerShape(8.dp)
                     )
-                    .clickable(onClick = {})
+                    .clickable(onClick = { checkAndRequestPermission() })
                     .border(2.dp, color = colorResource(R.color.text_green), shape = RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ){
@@ -258,8 +365,42 @@ fun HomeScreen(
 
         }
     }
-}
 
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = {
+                Text("Microphone Permission Required")
+            },
+            text = {
+                Text("This app needs microphone permission to recognize your voice. Please grant permission in app settings.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showPermissionDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    if (showDialog) {
+        VoiceQueryDialog(
+            isListening = isListening,
+            partialText = partialText,
+            finalText = finalText,
+            backendResponse = backendResponse,
+            isLoading = isLoading,
+            errorMessage = errorMessage,
+            audioLevel = audioLevel,
+            onStartListening = { queryViewModel.startListening() },
+            onStopListening = { queryViewModel.stopListening() },
+            onDismiss = {
+                queryViewModel.stopListening()
+                showDialog = false
+            }
+        )
+    }
+}
 @Composable
 fun GridItem(
     label: String,

@@ -30,6 +30,12 @@ import com.example.mymajor1.viewmodel.CropDetectionViewModel
 import com.example.mymajor1.viewmodel.CropDetectionViewModelFactory
 import com.example.mymajor1.viewmodel.FarmerViewModel
 import com.example.mymajor1.viewmodel.FarmerViewModelFactory
+import com.example.mymajor1.viewmodel.QueryViewModel
+import com.example.mymajor1.viewmodel.QueryViewModelFactory
+import com.example.mymajor1.viewmodel.WeatherViewModel
+import com.example.mymajor1.viewmodel.WeatherViewModelFactory
+import com.google.android.gms.location.LocationServices
+
 
 sealed class Screen(val route: String) {
     object Splash: Screen("splash_screen")
@@ -56,6 +62,8 @@ fun ApplicationNavGraph(
     val tokenManager = TokenManager(context.dataStore)
     val apiService = ApiService.api
 
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+
 
     val authViewModel: AuthViewModel = viewModel(
         factory = AuthViewModelFactory(apiService, tokenManager)
@@ -67,6 +75,14 @@ fun ApplicationNavGraph(
 
     val cropDetectionViewModel: CropDetectionViewModel = viewModel (
         factory = CropDetectionViewModelFactory(apiService, tokenManager)
+    )
+
+    val queryViewModel: QueryViewModel = viewModel (
+        factory = QueryViewModelFactory(apiService, tokenManager)
+    )
+
+    val weatherViewModel: WeatherViewModel = viewModel (
+        factory = WeatherViewModelFactory(apiService, tokenManager)
     )
 
     NavHost(
@@ -111,7 +127,10 @@ fun ApplicationNavGraph(
         composable(Screen.Home.route){
             HomeScreen(
                 farmerViewModel = farmerViewModel,
-                navController = navController
+                queryViewModel = queryViewModel,
+                navController = navController,
+                weatherViewModel = weatherViewModel,
+                fusedLocationClient = fusedLocationClient
             )
         }
 

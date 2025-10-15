@@ -21,6 +21,7 @@ tensorflow-lite = "2.14.0"
 tensorflow-lite-support = "0.4.4"
 tensorflow-lite-metadata = "0.4.4"
 tensorflow-lite-task-vision = "0.4.0"
+compose-animation = "1.5.4"
 
 
 [libraries]
@@ -57,7 +58,7 @@ tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "te
 tensorflow-lite-support = { module = "org.tensorflow:tensorflow-lite-support", version.ref = "tensorflow-lite-support" }
 tensorflow-lite-metadata = { module = "org.tensorflow:tensorflow-lite-metadata", version.ref = "tensorflow-lite-metadata" }
 tensorflow-lite-task-vision = { module = "org.tensorflow:tensorflow-lite-task-vision", version.ref = "tensorflow-lite-task-vision" }
-
+androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "compose-animation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

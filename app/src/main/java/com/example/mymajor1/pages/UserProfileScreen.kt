@@ -55,15 +55,13 @@ fun UserProfileScreen(
 
     val userId by authViewModel.userId.collectAsState()
 
-    // Runtime permission state
     val locationPermissionState = rememberPermissionState(
         permission = android.Manifest.permission.ACCESS_FINE_LOCATION
     )
 
-// Check permission like this
     LaunchedEffect(locationPermissionState.status) {
         if (locationPermissionState.status.isGranted) {
-            address = getCurrentLocation(fusedLocationClient)
+            address = getCurrentLocation(fusedLocationClient).toString()
         }
     }
 
@@ -179,7 +177,7 @@ fun UserProfileScreen(
                     IconButton(onClick = {
                         scope.launch {
                             if (locationPermissionState.status.isGranted) {
-                                address = getCurrentLocation(fusedLocationClient)
+                                address = getCurrentLocation(fusedLocationClient).toString()
                             } else {
                                 locationPermissionState.launchPermissionRequest()
                             }
@@ -266,14 +264,15 @@ fun UserProfileScreen(
 }
 
 @SuppressLint("MissingPermission")
-suspend fun getCurrentLocation(fusedLocationClient: FusedLocationProviderClient): String {
+suspend fun getCurrentLocation(fusedLocationClient: FusedLocationProviderClient): Pair<Double, Double>? {
     return try {
         val location: Location? = fusedLocationClient.lastLocation.await()
-        location?.let { "Lat: ${it.latitude}, Lng: ${it.longitude}" } ?: "Location unavailable"
+        location?.let { Pair(it.latitude, it.longitude) }
     } catch (e: Exception) {
-        "Error fetching location: ${e.message}"
+        null
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

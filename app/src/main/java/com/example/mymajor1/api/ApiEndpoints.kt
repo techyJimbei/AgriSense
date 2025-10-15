@@ -4,10 +4,13 @@ import com.example.mymajor1.model.CropDetectionRequest
 import com.example.mymajor1.model.CropDetectionResponse
 import com.example.mymajor1.model.FarmerAccountRequest
 import com.example.mymajor1.model.FarmerAccountResponse
+import com.example.mymajor1.model.QueryRequest
+import com.example.mymajor1.model.QueryResponse
 import com.example.mymajor1.model.UserLoginRequest
 import com.example.mymajor1.model.UserLoginResponse
 import com.example.mymajor1.model.UserSignUpRequest
 import com.example.mymajor1.model.UserSignUpResponse
+import com.example.mymajor1.model.WeatherResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -15,6 +18,7 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface ApiEndpoints {
 
@@ -38,7 +42,20 @@ interface ApiEndpoints {
     @PUT("/api/farmer/{id}")
     suspend fun updateFarmer(@Header("Authorization") token: String, @Path("id") id: Long, @Body request: FarmerAccountRequest): Response<FarmerAccountResponse>
 
-    //crop diagnosis
+    //crop diagnosis endpoints
     @POST("/api/crop/detect")
     suspend fun detectDisease(@Header("Authorization") token: String, @Body disease: CropDetectionRequest): Response<CropDetectionResponse>
+
+    //speech to text endpoints
+    @POST("api/query/ask")
+    suspend fun sendQuery(@Header("Authorization") token: String, @Body request: QueryRequest): Response<QueryResponse>
+
+    //weather endpoints
+    @GET("api/weather")
+    suspend fun getWeather(
+        @Header("Authorization") token: String,
+        @Query("latitude") latitude: Float,
+        @Query("longitude") longitude: Float,
+        @Query("language") language: String = "en"
+    ): Response<WeatherResponse>
 }
