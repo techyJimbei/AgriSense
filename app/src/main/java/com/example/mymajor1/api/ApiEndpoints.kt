@@ -1,24 +1,8 @@
 package com.example.mymajor1.api
 
-import com.example.mymajor1.model.CropDetectionRequest
-import com.example.mymajor1.model.CropDetectionResponse
-import com.example.mymajor1.model.FarmerAccountRequest
-import com.example.mymajor1.model.FarmerAccountResponse
-import com.example.mymajor1.model.QueryRequest
-import com.example.mymajor1.model.QueryResponse
-import com.example.mymajor1.model.UserLoginRequest
-import com.example.mymajor1.model.UserLoginResponse
-import com.example.mymajor1.model.UserSignUpRequest
-import com.example.mymajor1.model.UserSignUpResponse
-import com.example.mymajor1.model.WeatherResponse
+import com.example.mymajor1.model.*
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.POST
-import retrofit2.http.PUT
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 
 interface ApiEndpoints {
 
@@ -30,7 +14,7 @@ interface ApiEndpoints {
     suspend fun login(@Body request: UserLoginRequest): Response<UserLoginResponse>
 
     @POST("/api/auth/verify")
-    suspend fun verifyToken(@Header("Authorization") token : String): Response<Boolean>
+    suspend fun verifyToken(@Header("Authorization") token: String): Response<Boolean>
 
     //farmer account endpoints
     @POST("/api/farmer/register")
@@ -40,17 +24,27 @@ interface ApiEndpoints {
     suspend fun getFarmerDetails(@Header("Authorization") token: String): Response<FarmerAccountResponse>
 
     @PUT("/api/farmer/{id}")
-    suspend fun updateFarmer(@Header("Authorization") token: String, @Path("id") id: Long, @Body request: FarmerAccountRequest): Response<FarmerAccountResponse>
+    suspend fun updateFarmer(
+        @Header("Authorization") token: String,
+        @Path("id") id: Long,
+        @Body request: FarmerAccountRequest
+    ): Response<FarmerAccountResponse>
 
     //crop diagnosis endpoints
     @POST("/api/crop/detect")
-    suspend fun detectDisease(@Header("Authorization") token: String, @Body disease: CropDetectionRequest): Response<CropDetectionResponse>
+    suspend fun detectDisease(
+        @Header("Authorization") token: String,
+        @Body disease: CropDetectionRequest
+    ): Response<CropDetectionResponse>
 
     //speech to text endpoints
     @POST("api/query/ask")
-    suspend fun sendQuery(@Header("Authorization") token: String, @Body request: QueryRequest): Response<QueryResponse>
+    suspend fun sendQuery(
+        @Header("Authorization") token: String,
+        @Body request: QueryRequest
+    ): Response<QueryResponse>
 
-    //weather endpoints
+    //weather endpoints (main weather API)
     @GET("api/weather")
     suspend fun getWeather(
         @Header("Authorization") token: String,
@@ -58,4 +52,38 @@ interface ApiEndpoints {
         @Query("longitude") longitude: Float,
         @Query("language") language: String = "en"
     ): Response<WeatherResponse>
+
+    //crop calendar endpoints
+    @POST("api/calendar/advice")
+    suspend fun getAIAdvice(
+        @Header("Authorization") token: String,
+        @Body request: AdviceRequest
+    ): Response<AIAdvice>
+
+    @POST("api/calendar/schedule")
+    suspend fun createSchedule(
+        @Header("Authorization") token: String,
+        @Body request: ScheduleRequest
+    ): Response<ActivityScheduleResponse>
+
+    @POST("api/calendar/activities")
+    suspend fun saveActivities(
+        @Header("Authorization") token: String,
+        @Query("farmerId") farmerId: Long,
+        @Body activities: List<CropActivity>
+    ): Response<Unit>
+
+    @GET("api/calendar/activities")
+    suspend fun getActivities(
+        @Header("Authorization") token: String,
+        @Query("id") id: Long,
+        @Query("year") year: Int,
+        @Query("month") month: Int
+    ): Response<List<CropActivity>>
+
+    @GET("api/calendar/schedule")
+    suspend fun getCurrentSchedule(
+        @Header("Authorization") token: String,
+        @Query("farmerId") farmerId: Long
+    ): Response<ActivityScheduleResponse>
 }

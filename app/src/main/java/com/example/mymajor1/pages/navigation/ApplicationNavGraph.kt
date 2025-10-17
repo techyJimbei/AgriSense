@@ -3,6 +3,12 @@ package com.example.mymajor1.pages.navigation
 
 import UserProfileScreen
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -12,7 +18,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.mymajor1.api.ApiService
 import com.example.mymajor1.jwt.TokenManager
 import com.example.mymajor1.jwt.dataStore
-import com.example.mymajor1.pages.CropCalenderScreen
+import com.example.mymajor1.pages.AddActivityDialog
+import com.example.mymajor1.pages.CropCalendarScreen
 import com.example.mymajor1.pages.CropDiagnosisScreen
 import com.example.mymajor1.pages.GovernmentSchemeScreen
 import com.example.mymajor1.pages.HelpLineNumberScreen
@@ -24,8 +31,11 @@ import com.example.mymajor1.pages.ProfileDetailScreen
 import com.example.mymajor1.pages.SignUpScreen
 import com.example.mymajor1.pages.SoilAndNutrientsScreen
 import com.example.mymajor1.pages.Splash
+import com.example.mymajor1.pages.TodayScreen
 import com.example.mymajor1.viewmodel.AuthViewModel
 import com.example.mymajor1.viewmodel.AuthViewModelFactory
+import com.example.mymajor1.viewmodel.CropCalendarViewModel
+import com.example.mymajor1.viewmodel.CropCalenderViewModelFactory
 import com.example.mymajor1.viewmodel.CropDetectionViewModel
 import com.example.mymajor1.viewmodel.CropDetectionViewModelFactory
 import com.example.mymajor1.viewmodel.FarmerViewModel
@@ -35,6 +45,7 @@ import com.example.mymajor1.viewmodel.QueryViewModelFactory
 import com.example.mymajor1.viewmodel.WeatherViewModel
 import com.example.mymajor1.viewmodel.WeatherViewModelFactory
 import com.google.android.gms.location.LocationServices
+import java.time.LocalDate
 
 
 sealed class Screen(val route: String) {
@@ -48,6 +59,9 @@ sealed class Screen(val route: String) {
     object MandiPrice: Screen("mandiprice_screen")
     object SoilAndNutrients: Screen("soilandnutrients_screen")
     object CropCalendar: Screen("cropcalender_screen")
+    object TodayScreen: Screen("today_screen/{date}") {
+        fun createRoute(date: LocalDate) = "today_screen/$date"
+    }
     object CropDiagnosis: Screen("cropdiagnosis_screen")
     object Helpline: Screen("helpline_screen")
     object GovtSchemes: Screen("govtschemes_screen")
@@ -83,6 +97,10 @@ fun ApplicationNavGraph(
 
     val weatherViewModel: WeatherViewModel = viewModel (
         factory = WeatherViewModelFactory(apiService, tokenManager)
+    )
+
+    val cropCalendarViewModel: CropCalendarViewModel = viewModel (
+        factory = CropCalenderViewModelFactory(apiService, tokenManager)
     )
 
     NavHost(
@@ -151,8 +169,49 @@ fun ApplicationNavGraph(
             SoilAndNutrientsScreen()
         }
 
-        composable(Screen.CropCalendar.route){
-            CropCalenderScreen()
+        // In your NavHost
+        composable(Screen.CropCalendar.route) {
+            CropCalendarScreen(
+                viewModel = cropCalendarViewModel,
+                farmerViewModel = farmerViewModel,
+                onDayClick = { selectedDate ->
+                    navController.navigate(Screen.TodayScreen.createRoute(selectedDate))
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.TodayScreen.route) { backStackEntry ->
+            val dateString = backStackEntry.arguments?.getString("date")
+            val selectedDate = LocalDate.parse(dateString)
+
+            var showAddActivityDialog by remember { mutableStateOf(false) }
+            val farmerInfo by farmerViewModel.farmerInfo.collectAsState()
+
+            TodayScreen(
+                selectedDate = selectedDate,
+                viewModel = cropCalendarViewModel,
+                onBack = { navController.popBackStack() },
+                onAddActivity = { showAddActivityDialog = true },
+                modifier = Modifier,
+                fusedLocationClient = fusedLocationClient,
+                farmerViewModel = farmerViewModel
+            )
+
+            if (showAddActivityDialog) {
+                AddActivityDialog(
+                    farmerViewModel = farmerViewModel,
+                    selectedDate = selectedDate,
+                    viewModel = cropCalendarViewModel,
+                    onDismiss = { showAddActivityDialog = false },
+                    onActivityAdded = {
+                        showAddActivityDialog = false
+                        cropCalendarViewModel.loadActivities(farmerInfo?.farmerId ?: 0)
+                    }
+                )
+            }
         }
 
         composable(Screen.CropDiagnosis.route){
