@@ -86,4 +86,24 @@ interface ApiEndpoints {
         @Header("Authorization") token: String,
         @Query("farmerId") farmerId: Long
     ): Response<ActivityScheduleResponse>
+
+    //soil and nutrients endpoint
+    @GET("api/soil/advice")
+    suspend fun getSoilAdvice(
+        @Header("Authorization") token: String,
+        @Query("prevCrop") prevCrop: String,
+        @Query("soilType") soilType: String,
+        @Query("lat") lat: String,
+        @Query("lon") lon: String
+    ): SoilDataResponse
+
+    //mandi price endpoint
+    @GET("api/mandi/price")
+    suspend fun getMandiPrices(
+        @Header("Authorization") token: String,
+        @Query("state") state: String,
+        @Query("district") district: String,
+        @Query("commodity") commodity: String
+    ): List<MandiPriceResponse>
+
 }

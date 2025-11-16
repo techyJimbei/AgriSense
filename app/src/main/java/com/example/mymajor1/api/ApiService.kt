@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 object ApiService {
-    private const val BASE_URL = "http://192.168.1.2:8080/"
+    private const val BASE_URL = "http://192.168.1.5:8080/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

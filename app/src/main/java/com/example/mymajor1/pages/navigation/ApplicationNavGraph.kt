@@ -1,6 +1,5 @@
 package com.example.mymajor1.pages.navigation
 
-
 import UserProfileScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -12,10 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.mymajor1.api.ApiService
+import com.example.mymajor1.data.SchemeDescriptionScreen
 import com.example.mymajor1.jwt.TokenManager
 import com.example.mymajor1.jwt.dataStore
 import com.example.mymajor1.pages.AddActivityDialog
@@ -40,8 +42,12 @@ import com.example.mymajor1.viewmodel.CropDetectionViewModel
 import com.example.mymajor1.viewmodel.CropDetectionViewModelFactory
 import com.example.mymajor1.viewmodel.FarmerViewModel
 import com.example.mymajor1.viewmodel.FarmerViewModelFactory
+import com.example.mymajor1.viewmodel.MandiPriceViewModel
+import com.example.mymajor1.viewmodel.MandiPriceViewModelFactory
 import com.example.mymajor1.viewmodel.QueryViewModel
 import com.example.mymajor1.viewmodel.QueryViewModelFactory
+import com.example.mymajor1.viewmodel.SoilAdviceViewModel
+import com.example.mymajor1.viewmodel.SoilAdviceViewModelFactory
 import com.example.mymajor1.viewmodel.WeatherViewModel
 import com.example.mymajor1.viewmodel.WeatherViewModelFactory
 import com.google.android.gms.location.LocationServices
@@ -65,6 +71,9 @@ sealed class Screen(val route: String) {
     object CropDiagnosis: Screen("cropdiagnosis_screen")
     object Helpline: Screen("helpline_screen")
     object GovtSchemes: Screen("govtschemes_screen")
+    object SchemeDetail: Screen("schemeDetail/{schemeId}") {
+        fun createRoute(schemeId: Int) = "schemeDetail/$schemeId"
+    }
 }
 
 @Composable
@@ -101,6 +110,14 @@ fun ApplicationNavGraph(
 
     val cropCalendarViewModel: CropCalendarViewModel = viewModel (
         factory = CropCalenderViewModelFactory(apiService, tokenManager)
+    )
+
+    val mandiPriceViewModel: MandiPriceViewModel = viewModel (
+        factory = MandiPriceViewModelFactory(apiService, tokenManager)
+    )
+
+    val soilAdviceViewModel: SoilAdviceViewModel = viewModel (
+        factory = SoilAdviceViewModelFactory(apiService, tokenManager)
     )
 
     NavHost(
@@ -162,14 +179,17 @@ fun ApplicationNavGraph(
         }
 
         composable(Screen.MandiPrice.route){
-            MandiPriceScreen()
+            MandiPriceScreen(
+                viewModel = mandiPriceViewModel
+            )
         }
 
         composable(Screen.SoilAndNutrients.route) {
-            SoilAndNutrientsScreen()
+            SoilAndNutrientsScreen(
+                viewModel = soilAdviceViewModel
+            )
         }
 
-        // In your NavHost
         composable(Screen.CropCalendar.route) {
             CropCalendarScreen(
                 viewModel = cropCalendarViewModel,
@@ -226,7 +246,22 @@ fun ApplicationNavGraph(
         }
 
         composable(Screen.GovtSchemes.route){
-            GovernmentSchemeScreen()
+            GovernmentSchemeScreen(navController = navController)
+        }
+
+        composable(
+            route = Screen.SchemeDetail.route,
+            arguments = listOf(
+                navArgument("schemeId") {
+                    type = NavType.IntType
+                }
+            )
+        ) { backStackEntry ->
+            val schemeId = backStackEntry.arguments?.getInt("schemeId") ?: 1
+            SchemeDescriptionScreen(
+                navController = navController,
+                schemeId = schemeId
+            )
         }
 
     }
